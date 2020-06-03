@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 import lmfit
 from lmfit.lineshapes import gaussian, lorentzian
+import numdifftools as ndt
 
 import csv
 
@@ -12,7 +13,7 @@ warnings.filterwarnings('ignore')
 
 
 """To-do List:
-    - figure out how to get a better fit
+    - need to figure out why we can't find the covariance matrix'
     - model upto March 15th before shelter in place
     """
 
@@ -260,13 +261,24 @@ def plotGamma(times, L_g, K, t_0g):
 
 
 
-""" FUNCTION----------------------------------------------------------------
+"""R_0 FUNCTION----------------------------------------------------------------
 This function calculates R_0.
 ----------------------------------------------------------------------------"""
 def calculateR_0(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma):
     R_0 = (beta(time, L_E, k_E, t_0_E)+beta(time, L_I, k_I, t_0_I))/gamma
     return R_0
 
+
+
+"""R_0 FUNCTION USING NGM------------------------------------------------------
+This function calculates R_0 using the NGM.
+----------------------------------------------------------------------------"""
+def calculateR_0_NGM(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, delta, rho):
+    #w1 = gamma * (1-delta) + rho * delta
+    R_0 = beta(time, L_E, k_E, t_0_E) / alpha #w1 #+ beta(time, L_I, k_I, t_0_I) / alpha
+    
+    #(w1* beta(time, L_E, k_E, t_0_E) +beta(time, L_I, k_I, t_0_I) * alpha)/(w1* (alpha - beta(time, L_E, k_E, t_0_E)))
+    return R_0
 
 
 
@@ -282,6 +294,22 @@ def plotR_0(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma):
     axsR.set_ylabel('R_0')
 
     axsR.plot(time, calculateR_0(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma))
+
+    plt.show()
+    plt.clf()
+    
+    
+"""PLOTTING R_0 FUNCTION NGM---------------------------------------------------
+This displays a graph of the R0 function as modeled by the NGM. 
+----------------------------------------------------------------------------"""
+def plotR_0_NGM(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, delta, rho):
+    fig, axsR = plt.subplots()
+
+    axsR.set_title('Function of R_0_NGM')
+    axsR.set_xlabel('Time (number of days)')
+    axsR.set_ylabel('R_0')
+
+    axsR.plot(time, calculateR_0_NGM(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, delta, rho))
 
     plt.show()
     plt.clf()
@@ -344,7 +372,6 @@ def plotBestFitDied(t, D, total_deaths, residualBitch):
     plt.show()
     plt.clf()
 
-
     fig, axD = plt.subplots()
 
     axD.scatter(t, total_deaths, s=4, label='data')
@@ -366,7 +393,22 @@ def plotBestFitDied(t, D, total_deaths, residualBitch):
 
     plt.show()
     plt.clf()
-
+    
+    
+"""ERROR PROPOGATION----------------------------------------------------------
+This function computes the variance of R_0.
+Problem: NEED covariance matrix to comupte
+----------------------------------------------------------------------------"""
+def errorProp(t, L, k, t_0,alpha, coV):
+    dR_0dL = beta(t, 1, k, t_0)/ alpha #1/(alpha * np.power(np.e, k * (time - t_0))
+    dR_0dk = -beta(t, L, k ,t_0) * (t - t_0) * np.power(np.e, k*(t-t_0))/(alpha * (1 + np.power(np.e, k*(t-t_0))))
+    dR_0dt_0 = (k * np.power(np.e, k*(t-t_0)) * beta(t, L, k, t_0))/ (alpha * (1 + np.power(np.e, k*(t-t_0))))
+    dR_0da = -1 * beta(t, L, k ,t_0)/alpha**2
+    
+    sigma_R_0 = abs(dR_0dL)**2 * coV[1][2]**2 + abs(dR_0dk)**2 * coV[2][3]**2 + abs(dR_0dt_0)**2 * coV[3][4]**2  + abs(dR_0da)**2 * coV[8][9]**2
+    
+    
+    return sigma_R_0**0.5
 
 
 if __name__ == "__main__":
@@ -405,11 +447,35 @@ if __name__ == "__main__":
     mod.set_param_hint('alpha', min = 0.0714, max=0.2)#0.01667, max=0.1)
 
     # Delta -- Fatality Rate (2% fatality rate)
-    mod.set_param_hint('delta', min=0) #, max = 0.005)
+    mod.set_param_hint('delta', min=0)#, max = 0.005)
 
     # Rho -- Rate people die from infection
     mod.set_param_hint('rho', min = 0, max = 0.5)
+    
+    
+# Good parameters------------------------------------------
+    # # Exposed Beta -- Rate of Transmission between SUSCEPTIBLE and EXPOSED
+    # mod.set_param_hint('L_E', min=0, max = 6)
+    # mod.set_param_hint('k_E', min = 0, max = 0.15)
+    # mod.set_param_hint('t_0_E', min=1, max=365)
 
+    # # Infected Beta -- Rate of Transmission between SUSCEPTIBLE and INFECTED
+    # mod.set_param_hint('L_I', min=0, max = 6)
+    # mod.set_param_hint('k_I', min = 0, max = 0.5)
+    # mod.set_param_hint('t_0_I', min=1, max=365)
+
+    # # Gamma -- Rate of Recovery (sick for 2 weeks up to 6)
+    # mod.set_param_hint('gamma', min= 1/(6*7), max = 1/12)#0.02, max=0.1)
+
+    # # Alpha -- Incubation period (5-6 days up to 14 days)
+    # mod.set_param_hint('alpha', min = 0.0714, max=0.2)#0.01667, max=0.1)
+
+    # # Delta -- Fatality Rate (2% fatality rate)
+    # mod.set_param_hint('delta', min=0) #, max = 0.005)
+
+    # # Rho -- Rate people die from infection
+    # mod.set_param_hint('rho', min = 0, max = 0.5)
+#----------------------------------------------------------
 
     # Puts Total number of case and deaths in 1 array to calculate best fit
     data = []
@@ -425,68 +491,159 @@ if __name__ == "__main__":
                      L_I = 2,
                      k_I = 0.0005,
                      t_0_I = 52.1,
-                     gamma = 1/14, #0.074,
-                     alpha = 0.167, #0.192
+                     gamma = 1/14, #0.074, 1/14
+                     alpha = 0.167, #0.192 0.167
                      delta = 0.006,
-                     rho = 0.002)
+                     rho = 0.002, calc_covar= True)
+    
+    # Good params----------------------------------------
+        # result = mod.fit(data,
+        #              params,
+        #              t=times,
+        #              L_E = 2,
+        #              k_E = 0.0005,
+        #              t_0_E = 52.100165375262584,
+        #              L_I = 2,
+        #              k_I = 0.0005,
+        #              t_0_I = 52.1,
+        #              gamma = 1/14, #0.074,
+        #              alpha = 0.167, #0.192
+        #              delta = 0.006,
+        #              rho = 0.002, calc_covar= True)
+    #-----------------------------------------------------
 
-    print(result.covar)
+    covariance = result.covar
+    print(covariance)
+    
+#tests
+    # print(result.covar)
+    # print(len(result.residual))
+    # print(len(result.var_names))
+    # print(result.scale_covar)
+    # print(type(result.eval_uncertainty))
+    
+    lmfit.report_fit(result.params)
 
     plotBeta(moreTimes,
              result.best_values['L_I'],
              result.best_values['k_I'],
              result.best_values['t_0_I'])
+    
+
+    # Prints R_0 (before we knew R_0 NGM)
+    # print('Maximum R_0: ', max(calculateR_0(moreTimes,
+    #           result.best_values['L_E'],
+    #           result.best_values['k_E'],
+    #           result.best_values['t_0_E'],
+    #           result.best_values['L_I'],
+    #           result.best_values['k_I'],
+    #           result.best_values['t_0_I'],
+    #           result.best_values['gamma'])))
+
+    # print('Minimun R_0: ', min(calculateR_0(moreTimes,
+    #           result.best_values['L_E'],
+    #           result.best_values['k_E'],
+    #           result.best_values['t_0_E'],
+    #           result.best_values['L_I'],
+    #           result.best_values['k_I'],
+    #           result.best_values['t_0_I'],
+    #           result.best_values['gamma'])))
+
+    # meanOfR_0 = (max(calculateR_0(moreTimes,
+    #           result.best_values['L_E'],
+    #           result.best_values['k_E'],
+    #           result.best_values['t_0_E'],
+    #           result.best_values['L_I'],
+    #           result.best_values['k_I'],
+    #           result.best_values['t_0_I'],
+    #           result.best_values['gamma'])) +  min(calculateR_0(moreTimes,
+    #           result.best_values['L_E'],
+    #           result.best_values['k_E'],
+    #           result.best_values['t_0_E'],
+    #           result.best_values['L_I'],
+    #           result.best_values['k_I'],
+    #           result.best_values['t_0_I'],
+    #           result.best_values['gamma'])))/2
+
+    # print('Mean R_0: ', meanOfR_0)
+
+    # plotR_0(moreTimes,
+    #           result.best_values['L_E'],
+    #           result.best_values['k_E'],
+    #           result.best_values['t_0_E'],
+    #           result.best_values['L_I'],
+    #           result.best_values['k_I'],
+    #           result.best_values['t_0_I'],
+    #           result.best_values['gamma'])
 
 
-    print('Maximum R_0: ', max(calculateR_0(moreTimes,
+
+    #Prints R_0 NGM--------------------------------------------------
+    print('Maximum R_0_NGM: ', max(calculateR_0_NGM(moreTimes,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
               result.best_values['L_I'],
               result.best_values['k_I'],
               result.best_values['t_0_I'],
-              result.best_values['gamma'])))
+              result.best_values['gamma'],
+              result.best_values['alpha'],
+              result.best_values['delta'],
+              result.best_values['rho'])))
 
-    print('Minimun R_0: ', min(calculateR_0(moreTimes,
+    print('Minimun R_0_NGM: ', min(calculateR_0_NGM(moreTimes,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
               result.best_values['L_I'],
               result.best_values['k_I'],
               result.best_values['t_0_I'],
-              result.best_values['gamma'])))
+              result.best_values['gamma'],
+              result.best_values['alpha'],
+              result.best_values['delta'],
+              result.best_values['rho'])))
 
-    meanOfR_0 = (max(calculateR_0(moreTimes,
+    meanOfR_0_NGM = (max(calculateR_0_NGM(moreTimes,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
               result.best_values['L_I'],
               result.best_values['k_I'],
               result.best_values['t_0_I'],
-              result.best_values['gamma'])) +  min(calculateR_0(moreTimes,
+              result.best_values['gamma'],
+              result.best_values['alpha'],
+              result.best_values['delta'],
+              result.best_values['rho'])) +  min(calculateR_0_NGM(moreTimes,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
               result.best_values['L_I'],
               result.best_values['k_I'],
               result.best_values['t_0_I'],
-              result.best_values['gamma'])))/2
+              result.best_values['gamma'],
+              result.best_values['alpha'],
+              result.best_values['delta'],
+              result.best_values['rho'])))/2
 
-    print('Mean R_0: ', meanOfR_0)
+    print('Mean R_0_NGM: ', meanOfR_0_NGM)
 
-    plotR_0(moreTimes,
+    plotR_0_NGM(moreTimes,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
               result.best_values['L_I'],
               result.best_values['k_I'],
               result.best_values['t_0_I'],
-              result.best_values['gamma'])
+              result.best_values['gamma'],
+              result.best_values['alpha'],
+              result.best_values['delta'],
+              result.best_values['rho'])
+    #--------------------------------------------------
 
     #result.plot()
 
     # Prints L, k, t_0, gamma, alpha, delta
-    print(result.best_values)
+    # print(result.best_values)
 
     #Integrate SEIRD
     S, E, I, R, D = integrateEquationsOverTime(deriv,
@@ -545,6 +702,14 @@ if __name__ == "__main__":
     
     # Create an numpy array
     residualBitch = result.residual
+
+   #Print Variance of R_0
+   # print(errorProp(times, 
+   #                 result.best_values['L_E'], 
+   #                 result.best_values['k_E'],
+   #                 result.best_values['t_0_E'], 
+   #                 result.best_values['alpha'], 
+   #                 covariance))
     
 
     # Plot Residual and Best Fit
