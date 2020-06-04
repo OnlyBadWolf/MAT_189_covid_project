@@ -320,10 +320,10 @@ def plotR_0_NGM(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, delta, rho
 """PLOT THE BEST FIT OF INFECTED-----------------------------------------------
 This function plots the data of cases and the best fit for our model.
 ----------------------------------------------------------------------------"""
-def plotBestFitInfected(t, I, total_con, residualBitch):
+def plotBestFitInfected(t, I, total_con, residual):
     fig, axR = plt.subplots()
 
-    axR.plot(t, residualBitch)
+    axR.plot(t, residual)
     axR.axhline(0, linestyle='--')
 
     axR.set_title('Residual of Infected')
@@ -359,10 +359,10 @@ def plotBestFitInfected(t, I, total_con, residualBitch):
 """PLOT THE BEST FIT OF DEAD---------------------------------------------------
 This function plots the data of cases and the best fit for our model.
 ----------------------------------------------------------------------------"""
-def plotBestFitDied(t, D, total_deaths, residualBitch):
+def plotBestFitDied(t, D, total_deaths, residual):
     fig, axR = plt.subplots()
     #axR = fig.add_subplot(411, anchor=(0, 1))
-    axR.plot(t, residualBitch)
+    axR.plot(t, residual)
     axR.axhline(0, linestyle='--')
 
     axR.set_title('Residual of Died')
@@ -400,15 +400,37 @@ This function computes the variance of R_0.
 Problem: NEED covariance matrix to comupte
 ----------------------------------------------------------------------------"""
 def errorProp(t, L, k, t_0,alpha, coV):
-    dR_0dL = beta(t, 1, k, t_0)/ alpha #1/(alpha * np.power(np.e, k * (time - t_0))
+    dR_0dL = beta(t, 1, k, t_0)/ alpha  #1/(alpha * np.power(np.e, k * (time - t_0))
     dR_0dk = -beta(t, L, k ,t_0) * (t - t_0) * np.power(np.e, k*(t-t_0))/(alpha * (1 + np.power(np.e, k*(t-t_0))))
     dR_0dt_0 = (k * np.power(np.e, k*(t-t_0)) * beta(t, L, k, t_0))/ (alpha * (1 + np.power(np.e, k*(t-t_0))))
     dR_0da = -1 * beta(t, L, k ,t_0)/alpha**2
     
-    sigma_R_0 = abs(dR_0dL)**2 * coV[1][2]**2 + abs(dR_0dk)**2 * coV[2][3]**2 + abs(dR_0dt_0)**2 * coV[3][4]**2  + abs(dR_0da)**2 * coV[8][9]**2
+    sigma_R_0 = (abs(dR_0dL)**2 * coV[1][2]**2 + abs(dR_0dk)**2 * coV[2][3]**2 
+                 + abs(dR_0dt_0)**2 * coV[3][4]**2  + abs(dR_0da)**2 * coV[8][9]**2 
+                 + 2 * dR_0dL * dR_0dk * 0.467 
+                 + 2 * dR_0dL * dR_0dt_0 * -0.371
+                 + 2 * dR_0dL * dR_0da * 0.345
+                 + 2 * dR_0dk * dR_0dt_0 * 0.323
+                 + 2 * dR_0dk * dR_0da * 0.304
+                 + 2 * dR_0dt_0 * dR_0da * 0.995) 
     
     
     return sigma_R_0**0.5
+
+def plotErrorProp(t, sigma_R_0):
+    fig, axsR = plt.subplots()
+
+    axsR.set_title('Error of R_0')
+    axsR.set_xlabel('Time (number of days)')
+    axsR.set_ylabel('Uncertinty of R_0')
+
+    axsR.plot(t, sigma_R_0)
+
+    plt.show()
+    plt.clf()
+    
+# def rhoRate(cases, deaths):
+#     return 
 
 
 if __name__ == "__main__":
@@ -417,13 +439,10 @@ if __name__ == "__main__":
 
     # define constants
     N = totalPop()
-    #D = 14 # infections lasts 2 week on average (14 days)
-    y0 = (N - 2, 1, 1, 0, 0)  # initial conditions: one infected, rest susceptible
+    y0 = (N - 1, 0, 1, 0, 0)  # initial conditions: one infected, rest susceptible
     moreTimes = np.linspace(0, 365-1, 365)
     evenMoreTimes = np.linspace(0, 365*2-1, 365*2)
     withoutQuarentineTime = (0, 54-1, 54)
-    #alpha = 1/6 # incubation rate
-    #gamma = 1/14 # rate of recovery
 
     # MAKING AN ARRAY
     times = np.linspace(0, len(total_con)-1, len(total_con)) # time (in days)
@@ -452,30 +471,6 @@ if __name__ == "__main__":
     # Rho -- Rate people die from infection
     mod.set_param_hint('rho', min = 0, max = 0.5)
     
-    
-# Good parameters------------------------------------------
-    # # Exposed Beta -- Rate of Transmission between SUSCEPTIBLE and EXPOSED
-    # mod.set_param_hint('L_E', min=0, max = 6)
-    # mod.set_param_hint('k_E', min = 0, max = 0.15)
-    # mod.set_param_hint('t_0_E', min=1, max=365)
-
-    # # Infected Beta -- Rate of Transmission between SUSCEPTIBLE and INFECTED
-    # mod.set_param_hint('L_I', min=0, max = 6)
-    # mod.set_param_hint('k_I', min = 0, max = 0.5)
-    # mod.set_param_hint('t_0_I', min=1, max=365)
-
-    # # Gamma -- Rate of Recovery (sick for 2 weeks up to 6)
-    # mod.set_param_hint('gamma', min= 1/(6*7), max = 1/12)#0.02, max=0.1)
-
-    # # Alpha -- Incubation period (5-6 days up to 14 days)
-    # mod.set_param_hint('alpha', min = 0.0714, max=0.2)#0.01667, max=0.1)
-
-    # # Delta -- Fatality Rate (2% fatality rate)
-    # mod.set_param_hint('delta', min=0) #, max = 0.005)
-
-    # # Rho -- Rate people die from infection
-    # mod.set_param_hint('rho', min = 0, max = 0.5)
-#----------------------------------------------------------
 
     # Puts Total number of case and deaths in 1 array to calculate best fit
     data = []
@@ -485,101 +480,37 @@ if __name__ == "__main__":
     result = mod.fit(data,
                      params,
                      t=times,
-                     L_E = 2,
+                     L_E = 0.9, #2,
                      k_E = 0.0005,
-                     t_0_E = 52.100165375262584,
+                     t_0_E = 100, #52.100165375262584,
                      L_I = 2,
                      k_I = 0.0005,
                      t_0_I = 52.1,
                      gamma = 1/14, #0.074, 1/14
                      alpha = 0.167, #0.192 0.167
                      delta = 0.006,
-                     rho = 0.002, calc_covar= True)
+                     rho = 0.002) #, calc_covar= True)
     
-    # Good params----------------------------------------
-        # result = mod.fit(data,
-        #              params,
-        #              t=times,
-        #              L_E = 2,
-        #              k_E = 0.0005,
-        #              t_0_E = 52.100165375262584,
-        #              L_I = 2,
-        #              k_I = 0.0005,
-        #              t_0_I = 52.1,
-        #              gamma = 1/14, #0.074,
-        #              alpha = 0.167, #0.192
-        #              delta = 0.006,
-        #              rho = 0.002, calc_covar= True)
-    #-----------------------------------------------------
+    # t_0 is the value of the sigmoid's midpoint,
+    # L is the curve's maximum value,
+    # k is the logistic growth rate or steepness of the curve
 
-    covariance = result.covar
-    print(covariance)
+    print(result.fit_report())
+
+    #covariance = result.covar
+    #print(covariance)
     
-#tests
-    # print(result.covar)
-    # print(len(result.residual))
-    # print(len(result.var_names))
-    # print(result.scale_covar)
-    # print(type(result.eval_uncertainty))
     
-    lmfit.report_fit(result.params)
+    #lmfit.report_fit(result.params)
 
     plotBeta(moreTimes,
              result.best_values['L_I'],
              result.best_values['k_I'],
              result.best_values['t_0_I'])
-    
-
-    # Prints R_0 (before we knew R_0 NGM)
-    # print('Maximum R_0: ', max(calculateR_0(moreTimes,
-    #           result.best_values['L_E'],
-    #           result.best_values['k_E'],
-    #           result.best_values['t_0_E'],
-    #           result.best_values['L_I'],
-    #           result.best_values['k_I'],
-    #           result.best_values['t_0_I'],
-    #           result.best_values['gamma'])))
-
-    # print('Minimun R_0: ', min(calculateR_0(moreTimes,
-    #           result.best_values['L_E'],
-    #           result.best_values['k_E'],
-    #           result.best_values['t_0_E'],
-    #           result.best_values['L_I'],
-    #           result.best_values['k_I'],
-    #           result.best_values['t_0_I'],
-    #           result.best_values['gamma'])))
-
-    # meanOfR_0 = (max(calculateR_0(moreTimes,
-    #           result.best_values['L_E'],
-    #           result.best_values['k_E'],
-    #           result.best_values['t_0_E'],
-    #           result.best_values['L_I'],
-    #           result.best_values['k_I'],
-    #           result.best_values['t_0_I'],
-    #           result.best_values['gamma'])) +  min(calculateR_0(moreTimes,
-    #           result.best_values['L_E'],
-    #           result.best_values['k_E'],
-    #           result.best_values['t_0_E'],
-    #           result.best_values['L_I'],
-    #           result.best_values['k_I'],
-    #           result.best_values['t_0_I'],
-    #           result.best_values['gamma'])))/2
-
-    # print('Mean R_0: ', meanOfR_0)
-
-    # plotR_0(moreTimes,
-    #           result.best_values['L_E'],
-    #           result.best_values['k_E'],
-    #           result.best_values['t_0_E'],
-    #           result.best_values['L_I'],
-    #           result.best_values['k_I'],
-    #           result.best_values['t_0_I'],
-    #           result.best_values['gamma'])
-
 
 
     #Prints R_0 NGM--------------------------------------------------
-    print('Maximum R_0_NGM: ', max(calculateR_0_NGM(moreTimes,
+    print('Maximum R_0_NGM: ', max(calculateR_0_NGM(times,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
@@ -591,7 +522,7 @@ if __name__ == "__main__":
               result.best_values['delta'],
               result.best_values['rho'])))
 
-    print('Minimun R_0_NGM: ', min(calculateR_0_NGM(moreTimes,
+    print('Minimun R_0_NGM: ', min(calculateR_0_NGM(times,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
@@ -603,7 +534,7 @@ if __name__ == "__main__":
               result.best_values['delta'],
               result.best_values['rho'])))
 
-    meanOfR_0_NGM = (max(calculateR_0_NGM(moreTimes,
+    meanOfR_0_NGM = (max(calculateR_0_NGM(times,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
@@ -613,7 +544,7 @@ if __name__ == "__main__":
               result.best_values['gamma'],
               result.best_values['alpha'],
               result.best_values['delta'],
-              result.best_values['rho'])) +  min(calculateR_0_NGM(moreTimes,
+              result.best_values['rho'])) +  min(calculateR_0_NGM(times,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
@@ -627,7 +558,7 @@ if __name__ == "__main__":
 
     print('Mean R_0_NGM: ', meanOfR_0_NGM)
 
-    plotR_0_NGM(moreTimes,
+    plotR_0_NGM(times,
               result.best_values['L_E'],
               result.best_values['k_E'],
               result.best_values['t_0_E'],
@@ -638,9 +569,8 @@ if __name__ == "__main__":
               result.best_values['alpha'],
               result.best_values['delta'],
               result.best_values['rho'])
-    #--------------------------------------------------
 
-    #result.plot()
+    result.plot()
 
     # Prints L, k, t_0, gamma, alpha, delta
     # print(result.best_values)
@@ -701,20 +631,20 @@ if __name__ == "__main__":
 
     
     # Create an numpy array
-    residualBitch = result.residual
+    residualOfIandD = result.residual
 
    #Print Variance of R_0
-   # print(errorProp(times, 
-   #                 result.best_values['L_E'], 
-   #                 result.best_values['k_E'],
-   #                 result.best_values['t_0_E'], 
-   #                 result.best_values['alpha'], 
-   #                 covariance))
+    # print(errorProp(times, 
+    #                 result.best_values['L_E'], 
+    #                 result.best_values['k_E'],
+    #                 result.best_values['t_0_E'], 
+    #                 result.best_values['alpha'], 
+    #                 covariance))    
     
 
     # Plot Residual and Best Fit
-    plotBestFitInfected(times, I, total_con, residualBitch[:130])
-    plotBestFitDied(times, D, total_deaths, residualBitch[130:])
+    plotBestFitInfected(times, I, total_con, residualOfIandD[:130])
+    plotBestFitDied(times, D, total_deaths, residualOfIandD[130:])
 
 
     print('Population of the US:', N)
