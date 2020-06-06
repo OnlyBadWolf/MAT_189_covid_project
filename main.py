@@ -27,7 +27,7 @@ y0 = ()
 """DERIVATIVE OF SIR-----------------------------------------------------------
 This function calculates and define the derviatives for the data.
 ----------------------------------------------------------------------------"""
-def deriv(y, t, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, rho, a, b, c, d, f):# mu, sig, phi):
+def deriv(y, t, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, rho, a, b, c, d, f):
     S, E, I, R, D = y
 
     dSdt = -beta(t,L_E, k_E, t_0_E) * S * E / N  - beta(t,L_I,k_I,t_0_I) * S * I / N
@@ -46,12 +46,12 @@ def deriv(y, t, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, rho, a, b, c, d,
 """DERIVATIVE OF CONSTANT TERMS-----------------------------------------------
 This function calculates and defines the deriatives for constant parameters.
 ----------------------------------------------------------------------------"""
-def derivConst(y, t, beta, gamma, alpha, delta, rho):
+def derivConst(y, t, beta_E, beta_I, gamma, alpha, delta, rho):
     S, E, I, R, D = y
     
-    dSdt = -beta * S * E / N  - beta * S * I / N
+    dSdt = -beta_E * S * E / N  - beta_I * S * I / N
 
-    dEdt = beta * S * E / N  + beta * S * I / N - alpha * E
+    dEdt = beta_E * S * E / N  + beta_I * S * I / N - alpha * E
 
     dIdt = alpha * E - gamma * (1 - delta)* I - rho *  delta * I
 
@@ -128,8 +128,8 @@ def integrateEquationsOverTime(deriv, t, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma
 """INTEGRATE THE SEIRD EQUATIONS OVER TIME FOR CONSTANT VALUES-----------------
 This function integrates the SEIRD equation over time.
 ----------------------------------------------------------------------------"""
-def integrateEquationsOverTimeConst(derivConst, t, beta, gamma, alpha, delta, rho):
-    ret = odeint(derivConst, y0, t, args=(beta, gamma, alpha, delta, rho))
+def integrateEquationsOverTimeConst(derivConst, t, beta_E, beta_I, gamma, alpha, delta, rho):
+    ret = odeint(derivConst, y0, t, args=(beta_E, beta_I, gamma, alpha, delta, rho))
     S, E, I, R, D = ret.T
     return S, E, I, R, D
 
@@ -144,14 +144,14 @@ def plotSEIRD(t, S, E, I, R, D, title):
     ax.plot(t, E, 'm', alpha=0.7, linewidth=2, label='Exposed')
     ax.plot(t, I, 'y', alpha=0.7, linewidth=2, label='Infected')
     ax.plot(t, R, 'g', alpha=0.7, linewidth=2, label='Recovered')
-    ax.plot(t, D, 'r', alpha=0.7, linewidth=2, label='Died')
+    ax.plot(t, D, 'r', alpha=0.7, linewidth=2, label='Dead')
     ax.plot(t, S+E+I+R+D, 'c--', alpha=0.7, linewidth=2, label='Total')
 
     #ax.set_ylim(1, N)
     #ax.set_yscale('log')
     #ax.set_ylim(0, 2500000)
     #ax.set_ylim(0, 6045189)
-    ax.set_xlabel('Time (days)')
+    ax.set_xlabel('Days')
     ax.set_ylabel('Population')
     ax.set_title(title)
 
@@ -197,18 +197,6 @@ def beta(time, L, k, t_0):
 
 
 
-
-"""GASSIAN FUNCTION------------------------------------------------------
-This calculates the gaussian function.
-----------------------------------------------------------------------------"""
-def gaussianG(t, mu, sig, phi):
-    # mu is the position of center peak
-    # sig is the standard deviation 
-    # phi is the height of curve's peak
-    return phi * np.exp(-np.power(t - mu, 2) / (2 * np.power(sig, 2)))
-
-
-
 """DELTA FUNCTION--------------------------------------------------------------
 This function calcuates the rate in which individuals dying,
 delta. We are using a logistics function because the rate of individuals
@@ -226,7 +214,7 @@ def plotDelta(times, cases, deaths, D, I):
     fig, axsG = plt.subplots()
 
     axsG.set_title('Function of Delta')
-    axsG.set_xlabel('Time (number of days)')
+    axsG.set_xlabel('Days')
     axsG.set_ylabel('delta')
     axsG.plot(times, (deaths * 2)/(10 * cases))
     plt.show()
@@ -235,8 +223,8 @@ def plotDelta(times, cases, deaths, D, I):
     fig, axsD = plt.subplots()
 
     axsD.set_title('Function of Delta')
-    axsD.set_xlabel('Time (number of days)')
-    axsD.set_ylabel('delta')
+    axsD.set_xlabel('Days')
+    axsD.set_ylabel('Delta')
     axsD.plot(times, D/I)
     plt.show()
     plt.clf()
@@ -248,13 +236,23 @@ def plotDelta(times, cases, deaths, D, I):
 This displays a graph of the beta function. It should look like a upside
 logistic function.
 ----------------------------------------------------------------------------"""
-def plotBeta(times, L, k, t_0):
-    fig, axs = plt.subplots()
+def plotBeta(times, L_E, k_E, t_0_E, L_I, k_I, t_0_I):
+    fig, ax = plt.subplots()
     
-    axs.set_title('Function of Beta')
-    axs.set_xlabel('Time (Days)')
-    axs.set_ylabel('Beta')
-    axs.plot(times, beta(times, L, k, t_0))
+    ax.set_title('Function of Beta')
+    ax.set_xlabel('Days')
+    ax.set_ylabel('Beta')
+    ax.plot(times, beta(times, L_E, k_E, t_0_E), 'b--', label='Exposed')
+    ax.plot(times, beta(times, L_I, k_I, t_0_I), 'c', label='Infected')
+    
+    ax.yaxis.set_tick_params(length=0)
+    ax.xaxis.set_tick_params(length=0)
+    ax.grid(b=True, which='major', c='w', lw=2, ls='-')
+    legend = ax.legend()
+    legend.get_frame().set_alpha(0.5)
+    for spine in ('top', 'right', 'bottom', 'left'):
+        ax.spines[spine].set_visible(False)
+        
     plt.show()
     plt.clf()
 
@@ -492,7 +490,7 @@ if __name__ == "__main__":
                      t=times,
                       L_E = 0.2,
                       k_E = 0.0045,
-                      t_0_E = 22, 
+                      t_0_E = 56, 
                       L_I = 0.47,
                       k_I = 0.47,
                       t_0_I = 67,
@@ -512,7 +510,12 @@ if __name__ == "__main__":
     #print(result.eval_uncertainty())
     
     
-    print('Maximum of Beta: ', max(beta(times,
+    print('Maximum of Beta for Exposed: ', max(beta(times,
+                                        result.best_values['L_E'],
+                                        result.best_values['k_E'],
+                                        result.best_values['t_0_E'])))
+        
+    print('Maximum of Beta for Infected: ', max(beta(times,
                                         result.best_values['L_I'],
                                         result.best_values['k_I'],
                                         result.best_values['t_0_I'])))
@@ -547,17 +550,32 @@ if __name__ == "__main__":
                                                   result.best_values['k_E'],
                                                   result.best_values['t_0_E'],
                                                   result.best_values['alpha'])))/2)
-
+    
+    
+    #Plot Betas
+    plotBeta(times, result.best_values['L_E'],
+                    result.best_values['k_E'],
+                    result.best_values['t_0_E'], 
+                    result.best_values['L_I'],
+                    result.best_values['k_I'],
+                    result.best_values['t_0_I'])    
+    
+    #Plot R_0
     plotR_0_NGM(times,
                 result.best_values['L_E'],
                 result.best_values['k_E'],
                 result.best_values['t_0_E'],
                 result.best_values['alpha'])
     
-    plotBeta(times,
-             result.best_values['L_I'],
-             result.best_values['k_I'],
-             result.best_values['t_0_I'])
+    #Plot the uncertainty of R_0  
+    plotErrorProp(times, errorProp(times, 
+                    result.best_values['L_E'], 
+                    result.best_values['k_E'],
+                    result.best_values['t_0_E'], 
+                    result.best_values['alpha']))
+    
+    
+
 
     #Integrate SEIRD -- With Data
     S, E, I, R, D = integrateEquationsOverTime(deriv,
@@ -599,6 +617,10 @@ if __name__ == "__main__":
     S_wo, E_wo, I_wo, R_wo, D_wo = integrateEquationsOverTimeConst(derivConst,
                                                                         times, 
                                                                         max(beta(times,
+                                                                         result.best_values['L_E'],
+                                                                         result.best_values['k_E'],
+                                                                         result.best_values['t_0_E'])),
+                                                                        max(beta(times,
                                                                          result.best_values['L_I'],
                                                                          result.best_values['k_I'],
                                                                          result.best_values['t_0_I'])), 
@@ -614,6 +636,10 @@ if __name__ == "__main__":
     #Integrate SEIRD -- Without Quarentine a year out
     S_woq, E_woq, I_woq, R_woq, D_woq = integrateEquationsOverTimeConst(derivConst,
                                                                         moreTimes, 
+                                                                        max(beta(times,
+                                                                         result.best_values['L_E'],
+                                                                         result.best_values['k_E'],
+                                                                         result.best_values['t_0_E'])),
                                                                         max(beta(times,
                                                                          result.best_values['L_I'],
                                                                          result.best_values['k_I'],
@@ -636,13 +662,7 @@ if __name__ == "__main__":
     plotBestFitInfected(times, I, total_con, residualOfIandD[:130])
     plotBestFitDied(times, D, total_deaths, residualOfIandD[130:260])
     plotBestFitDelta(times, D, I, total_deaths, total_con, residualOfIandD[260:])
-    
-    #Print Variance of R_0  
-    plotErrorProp(times, errorProp(times, 
-                    result.best_values['L_E'], 
-                    result.best_values['k_E'],
-                    result.best_values['t_0_E'], 
-                    result.best_values['alpha']))
+
 
     print('Population of the US:', N)
     print('Total Number of Deaths:', max(total_deaths))
