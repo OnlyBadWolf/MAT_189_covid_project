@@ -415,14 +415,14 @@ def errorProp(t, L, k, t_0, alpha):
     dR_0dt_0 = (k * np.power(np.e, k*(t-t_0)) * beta(t, L, k, t_0))/ (alpha * (1 + np.power(np.e, k*(t-t_0))))
     dR_0da = -1 * beta(t, L, k ,t_0)/alpha**2
     
-    sigma_R_0 = (abs(dR_0dL)**2 * 48.1496804**2 + abs(dR_0dk)**2 * 1.17075370**2 
-                 + abs(dR_0dt_0)**2 * 30992.4437**2  + abs(dR_0da)**2 * 17.4965093**2 
-                 + 2 * dR_0dL * dR_0dk * -1.000 
-                 + 2 * dR_0dL * dR_0dt_0 * -0.983
-                 + 2 * dR_0dL * dR_0da * 0.997
-                 + 2 * dR_0dk * dR_0dt_0 * 0.978
-                 + 2 * dR_0dk * dR_0da * -0.999
-                 + 2 * dR_0dt_0 * dR_0da * -0.966) 
+    sigma_R_0 = (abs(dR_0dL)**2 * 35.7762578**2 + abs(dR_0dk)**2 * 0.89701212**2 
+                 + abs(dR_0dt_0)**2 * 21785.9891**2  + abs(dR_0da)**2 * 12.9266165**2 
+                 + 2 * dR_0dL * dR_0dk * -0.999 
+                 + 2 * dR_0dL * dR_0dt_0 * -0.978
+                 + 2 * dR_0dL * dR_0da * 0.995
+                 + 2 * dR_0dk * dR_0dt_0 * 0.969
+                 + 2 * dR_0dk * dR_0da * -0.998
+                 + 2 * dR_0dt_0 * dR_0da * -0.953) 
     
     
     return sigma_R_0**0.5
@@ -490,9 +490,9 @@ if __name__ == "__main__":
     result = mod.fit(data,
                      params,
                      t=times,
-                      L_E = 0.194,
+                      L_E = 0.2,
                       k_E = 0.0045,
-                      t_0_E = 56, 
+                      t_0_E = 22, 
                       L_I = 0.47,
                       k_I = 0.47,
                       t_0_I = 67,
@@ -509,7 +509,7 @@ if __name__ == "__main__":
     #Prints L's, k's, t_0's, gamma, alpha, rho
     print(result.fit_report())
     
-    print(result.eval_uncertainty())
+    #print(result.eval_uncertainty())
     
     
     print('Maximum of Beta: ', max(beta(times,
@@ -637,13 +637,7 @@ if __name__ == "__main__":
     plotBestFitDied(times, D, total_deaths, residualOfIandD[130:260])
     plotBestFitDelta(times, D, I, total_deaths, total_con, residualOfIandD[260:])
     
-   #Print Variance of R_0
-    print('Error of R_0: ', errorProp(times, 
-                    result.best_values['L_E'], 
-                    result.best_values['k_E'],
-                    result.best_values['t_0_E'], 
-                    result.best_values['alpha']))    
-    
+    #Print Variance of R_0  
     plotErrorProp(times, errorProp(times, 
                     result.best_values['L_E'], 
                     result.best_values['k_E'],
