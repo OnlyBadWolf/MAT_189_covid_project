@@ -143,10 +143,10 @@ def integrateEquationsOverTimeConst(derivConst, t, beta_E, beta_I, gamma, alpha,
 """PLOT THE SEIRD MODEL--------------------------------------------------------
 This function plots the SEIRD Model.
 ----------------------------------------------------------------------------"""
-def plotSEIRD(t, S, E, I, R, D, S_q, E_q, I_q, R_q, D_q):
+def plotSEIRD(t, S, E, I, R, D, S_q, E_q, I_q, R_q, D_q, title):
     fig, (ax, axQ) = plt.subplots(2,figsize=(10,4), sharex=True)
 
-    fig.suptitle('SEIRD Model of COVID-19')
+    fig.suptitle(title)
     
     ax.set_title('with Quarantine')
 
@@ -170,6 +170,8 @@ def plotSEIRD(t, S, E, I, R, D, S_q, E_q, I_q, R_q, D_q):
     # maxI.fill(max(I))
     # maxD = np.empty(len(t))
     # maxD.fill(max(D))
+    legend = fig.legend()
+    legend.get_frame()#.set_alpha(0.5)
     
     
     axQ.set_title('without Quarantine')
@@ -191,8 +193,6 @@ def plotSEIRD(t, S, E, I, R, D, S_q, E_q, I_q, R_q, D_q):
     
     axQ.yaxis.set_major_formatter(mtick.FormatStrFormatter('%1.e'))
     
-    legend = fig.legend()
-    legend.get_frame()#.set_alpha(0.5)
 
     
     plt.show()
@@ -757,7 +757,7 @@ if __name__ == "__main__":
     print('Total:', min(total)) # should equal total population
 
     #Plot SEIRD model -- Based on data with and without quarentine
-    plotSEIRD(times, S, E, I, R, D, S_wo, E_wo, I_wo, R_wo, D_wo)
+    plotSEIRD(times, S, E, I, R, D, S_wo, E_wo, I_wo, R_wo, D_wo, 'SEIRD Model of COVID-19')
         
     #Plot SEIRD model -- A year out
-    plotSEIRD(moreTimes, S_y, E_y, I_y, R_y, D_y, S_woq, E_woq, I_woq, R_woq, D_woq)
+    plotSEIRD(moreTimes, S_y, E_y, I_y, R_y, D_y, S_woq, E_woq, I_woq, R_woq, D_woq, 'Projected SEIRD Model of COVID-19')
