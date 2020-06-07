@@ -25,7 +25,7 @@ y0 = ()
 
 
 """DERIVATIVE OF SIR-----------------------------------------------------------
-This function calculates and define the derviatives for the data.
+This function calculates and define the derviatives with our parameters.
 ----------------------------------------------------------------------------"""
 def deriv(y, t, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, rho, a, b, c, d, f):
     S, E, I, R, D = y
@@ -44,7 +44,8 @@ def deriv(y, t, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, rho, a, b, c, d,
 
 
 """DERIVATIVE OF CONSTANT TERMS-----------------------------------------------
-This function calculates and defines the deriatives for constant parameters.
+This function calculates and defines the deriatives with your constant 
+parameters.
 ----------------------------------------------------------------------------"""
 def derivConst(y, t, beta_E, beta_I, gamma, alpha, delta, rho):
     S, E, I, R, D = y
@@ -120,16 +121,20 @@ def totalNumberOfDeaths():
 """INTEGRATE THE SEIRD EQUATIONS OVER TIME-------------------------------------
 This function integrates the SEIRD equation over time.
 ----------------------------------------------------------------------------"""
-def integrateEquationsOverTime(deriv, t, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, rho, a, b, c, d, f):
-    ret = odeint(deriv, y0, t, args=(L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, rho, a, b, c, d, f))
+def integrateEquationsOverTime(deriv, t, L_E, k_E, t_0_E, L_I, k_I, t_0_I, 
+                               gamma, alpha, rho, a, b, c, d, f):
+    ret = odeint(deriv, y0, t, args=(L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, 
+                                     alpha, rho, a, b, c, d, f))
     S, E, I, R, D = ret.T
     return S, E, I, R, D
 
 """INTEGRATE THE SEIRD EQUATIONS OVER TIME FOR CONSTANT VALUES-----------------
 This function integrates the SEIRD equation over time.
 ----------------------------------------------------------------------------"""
-def integrateEquationsOverTimeConst(derivConst, t, beta_E, beta_I, gamma, alpha, delta, rho):
-    ret = odeint(derivConst, y0, t, args=(beta_E, beta_I, gamma, alpha, delta, rho))
+def integrateEquationsOverTimeConst(derivConst, t, beta_E, beta_I, gamma, alpha, 
+                                    delta, rho):
+    ret = odeint(derivConst, y0, t, args=(beta_E, beta_I, gamma, alpha, delta, 
+                                          rho))
     S, E, I, R, D = ret.T
     return S, E, I, R, D
 
@@ -147,12 +152,12 @@ def plotSEIRD(t, S, E, I, R, D, title):
     ax.plot(t, D, 'r', alpha=0.7, linewidth=2, label='Dead')
     ax.plot(t, S+E+I+R+D, 'c--', alpha=0.7, linewidth=2, label='Total')
 
-    #ax.set_ylim(1, N)
-    #ax.set_yscale('log')
+    ax.set_ylim(1, N)
+    ax.set_yscale('log')
     #ax.set_ylim(0, 2500000)
     #ax.set_ylim(0, 6045189)
-    ax.set_xlabel('Days')
-    ax.set_ylabel('Population')
+    ax.set_xlabel('Time (Days)')
+    ax.set_ylabel('Population (Number of Individuals)')
     ax.set_title(title)
 
 
@@ -199,7 +204,7 @@ def beta(time, L, k, t_0):
 
 """DELTA FUNCTION--------------------------------------------------------------
 This function calcuates the rate in which individuals dying,
-delta. We are using a logistics function because the rate of individuals
+delta. We are using a third-degree polynomial because the rate of individuals
 dying should decrease over time as we get better at treating.
 ----------------------------------------------------------------------------"""
 def  delta(t, a, b, c, d, f):
@@ -239,11 +244,11 @@ logistic function.
 def plotBeta(times, L_E, k_E, t_0_E, L_I, k_I, t_0_I):
     fig, ax = plt.subplots()
     
-    ax.set_title('Function of Beta')
-    ax.set_xlabel('Days')
+    ax.set_title('Beta over Time')
+    ax.set_xlabel('Time (Days)')
     ax.set_ylabel('Beta')
-    ax.plot(times, beta(times, L_E, k_E, t_0_E), 'b--', label='Exposed')
-    ax.plot(times, beta(times, L_I, k_I, t_0_I), 'c', label='Infected')
+    ax.plot(times, beta(times, L_E, k_E, t_0_E), 'c--', label='Exposed')
+    ax.plot(times, beta(times, L_I, k_I, t_0_I), 'b', label='Infected')
     
     ax.yaxis.set_tick_params(length=0)
     ax.xaxis.set_tick_params(length=0)
@@ -273,9 +278,9 @@ This displays a graph of the R0 function as modeled by the NGM.
 def plotR_0_NGM(time, L_E, k_E, t_0_E, alpha):
     fig, axsR = plt.subplots()
 
-    axsR.set_title('Function of R_0_NGM')
-    axsR.set_xlabel('Time (number of days)')
-    axsR.set_ylabel('R_0')
+    axsR.set_title('Reproduction Number (R\u2080) Over Time')
+    axsR.set_xlabel('Time (Days)')
+    axsR.set_ylabel('Reproduction Number (R\u2080)')
 
     axsR.plot(time, calculateR_0_NGM(time, L_E, k_E, t_0_E, alpha))
 
@@ -294,7 +299,7 @@ def plotBestFitInfected(t, I, total_con, residual):
     axR.plot(t, residual)
     axR.axhline(0, linestyle='--')
 
-    axR.set_title('Residual of Infected')
+    axR.set_title('Residual of Infected Population')
     axR.set_ylabel('Residual')
     axR.set_xlabel('Time (Days)')
 
@@ -308,9 +313,9 @@ def plotBestFitInfected(t, I, total_con, residual):
 
     #ax.set_ylim(0, 1200000)
     #ax.set_ylim(0, 60953552)
-    axI.set_xlabel('Time (days)')
-    axI.set_ylabel('Population')
-    axI.set_title('Infected Population')
+    axI.set_xlabel('Time (Days)')
+    axI.set_ylabel('Population (Number of Infected Individuals)')
+    axI.set_title('Population of Infected Individuals')
 
     axI.yaxis.set_tick_params(length=0)
     axI.xaxis.set_tick_params(length=0)
@@ -333,7 +338,7 @@ def plotBestFitDied(t, D, total_deaths, residual):
     axR.plot(t, residual)
     axR.axhline(0, linestyle='--')
 
-    axR.set_title('Residual of Dead')
+    axR.set_title('Residual of Dead Population')
     axR.set_ylabel('Residual')
     axR.set_xlabel('Time (Days)')
 
@@ -348,8 +353,8 @@ def plotBestFitDied(t, D, total_deaths, residual):
     #ax.set_ylim(0, 1200000)
     #ax.set_ylim(0, 60953552)
     axD.set_xlabel('Time (Days)')
-    axD.set_ylabel('Number of Individuals who Died')
-    axD.set_title('Population Died from COVID-19')
+    axD.set_ylabel('Population (Number of Dead Individuals)')
+    axD.set_title('Population of Dead Individuals' )
 
     axD.yaxis.set_tick_params(length=0)
     axD.xaxis.set_tick_params(length=0)
@@ -373,9 +378,9 @@ def plotBestFitDelta(t, D, I, total_deaths, total_con, residual):
     axR.plot(t, residual)
     axR.axhline(0, linestyle='--')
 
-    axR.set_title('Residual of Fatality Rate')
+    axR.set_title('Residual of the Fatality Rate')
     axR.set_ylabel('Residual')
-    axR.set_xlabel('Time (days)')
+    axR.set_xlabel('Time (Days)')
 
     plt.show()
     plt.clf()
@@ -387,7 +392,7 @@ def plotBestFitDelta(t, D, I, total_deaths, total_con, residual):
 
     #ax.set_ylim(0, 1200000)
     #ax.set_ylim(0, 60953552)
-    axD.set_xlabel('Time (days)')
+    axD.set_xlabel('Time (Days)')
     axD.set_ylabel('Fatality Rate')
     axD.set_title('Fatality Rate of COVID-19')
 
@@ -404,8 +409,7 @@ def plotBestFitDelta(t, D, I, total_deaths, total_con, residual):
     
     
 """ERROR PROPOGATION----------------------------------------------------------
-This function computes the variance of R_0.
-Problem: NEED covariance matrix to comupte
+This function computes the variance of R_0. This is a manual function.
 ----------------------------------------------------------------------------"""
 def errorProp(t, L, k, t_0, alpha):
     dR_0dL = beta(t, 1, k, t_0)/ alpha
@@ -425,12 +429,16 @@ def errorProp(t, L, k, t_0, alpha):
     
     return sigma_R_0**0.5
 
+
+"""ERROR PROPOGATION PLOT------------------------------------------------------
+This function computes the variance of R_0. This is a manual function.
+----------------------------------------------------------------------------"""
 def plotErrorProp(t, sigma_R_0):
     fig, axsR = plt.subplots()
 
-    axsR.set_title('Error of R_0')
+    axsR.set_title('Error of Reproduction Number (R\u2080)')
     axsR.set_xlabel('Time (Days)')
-    axsR.set_ylabel('Uncertinty of R_0')
+    axsR.set_ylabel('Uncertinty of Reproduction Number (R\u2080)')
 
     axsR.plot(t, sigma_R_0)
 
@@ -646,7 +654,8 @@ if __name__ == "__main__":
                                                                          result.best_values['t_0_I'])), 
                                                                         result.best_values['gamma'], 
                                                                         result.best_values['alpha'], 
-                                                                        max(delta(times, result.best_values['a'],
+                                                                        max(delta(times, 
+                                                                         result.best_values['a'],
                                                                          result.best_values['b'],
                                                                          result.best_values['c'],
                                                                          result.best_values['d'],
@@ -667,11 +676,11 @@ if __name__ == "__main__":
     print('Population of the US:', N)
     print('Total Number of Deaths:', max(total_deaths))
     print('Total Number of Cases:', max(totalNumberOfCases()))
-    print('Suspetible:', min(S[:len(times)]))
-    print('Exposed:', max(E[:len(times)]))
-    print('Infected:', max(I[:len(times)]))
-    print('Recovered:', max(R[:len(times)])) # should be somewhere around 300,000
-    print('Dead:',max(D[:len(times)])) # should equal total dead
+    print('Suspetible:', min(S))
+    print('Exposed:', max(E))
+    print('Infected:', max(I))
+    print('Recovered:', max(R)) # should be somewhere around 300,000
+    print('Dead:',max(D)) # should equal total dead
 
     total = S+I+E+R+D
 
@@ -684,7 +693,7 @@ if __name__ == "__main__":
     plotSEIRD(times, S_wo, E_wo, I_wo, R_wo, D_wo, 'SEIRD Model of COVID-19 without Quatentine')
     
     #Plot SEIRD model -- A year out
-    plotSEIRD(moreTimes, S_y, E_y, I_y, R_y, D_y, 'Projected SEIRD Model of COVID-19 for a Year')
+    plotSEIRD(moreTimes, S_y, E_y, I_y, R_y, D_y, 'Projected SEIRD Model of COVID-19')
     
     #Plot SEIRD model -- without quarentine (using the max. beta and max. delta from data)
-    plotSEIRD(moreTimes, S_woq, E_woq, I_woq, R_woq, D_woq, 'Projected SEIRD Model of COVID-19 without Quatentine for a Year')
+    plotSEIRD(moreTimes, S_woq, E_woq, I_woq, R_woq, D_woq, 'Projected SEIRD Model of COVID-19 without Quatentine')
