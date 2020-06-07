@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 
 from scipy.integrate import odeint
 import lmfit
@@ -142,8 +143,12 @@ def integrateEquationsOverTimeConst(derivConst, t, beta_E, beta_I, gamma, alpha,
 """PLOT THE SEIRD MODEL--------------------------------------------------------
 This function plots the SEIRD Model.
 ----------------------------------------------------------------------------"""
-def plotSEIRD(t, S, E, I, R, D, title):
-    f, ax = plt.subplots(1,1,figsize=(10,4))
+def plotSEIRD(t, S, E, I, R, D, S_q, E_q, I_q, R_q, D_q):
+    fig, (ax, axQ) = plt.subplots(2,figsize=(10,4), sharex=True)
+
+    fig.suptitle('SEIRD Model of COVID-19')
+    
+    ax.set_title('with Quarantine')
 
     ax.plot(t, S, 'b', alpha=0.7, linewidth=2, label='Susceptible')
     ax.plot(t, E, 'm', alpha=0.7, linewidth=2, label='Exposed')
@@ -152,26 +157,72 @@ def plotSEIRD(t, S, E, I, R, D, title):
     ax.plot(t, D, 'r', alpha=0.7, linewidth=2, label='Dead')
     ax.plot(t, S+E+I+R+D, 'c--', alpha=0.7, linewidth=2, label='Total')
 
-    ax.set_ylim(1, N)
-    ax.set_yscale('log')
-    #ax.set_ylim(0, 2500000)
+    #ax.set_ylim(1, N)
+    #ax.set_yscale('log')
+    ax.set_ylim(0, 2500000)
     #ax.set_ylim(0, 6045189)
-    ax.set_xlabel('Time (Days)')
-    ax.set_ylabel('Population (Number of Individuals)')
-    ax.set_title(title)
+    ax.set_ylabel('Population')
+    
+    ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%1.e'))
+    #ax.ticklabel_format(axis='y', style='sci', useMathText=True)
 
+    # maxI = np.empty(len(t))
+    # maxI.fill(max(I))
+    # maxD = np.empty(len(t))
+    # maxD.fill(max(D))
+    
+    
+    axQ.set_title('without Quarantine')
+    
+    axQ.plot(t, S_q, 'b', alpha=0.7, linewidth=2, label='Susceptible')
+    axQ.plot(t, E_q, 'm', alpha=0.7, linewidth=2, label='Exposed')
+    axQ.plot(t, I_q, 'y', alpha=0.7, linewidth=2, label='Infected')
+    axQ.plot(t, R_q, 'g', alpha=0.7, linewidth=2, label='Recovered')
+    axQ.plot(t, D_q, 'r', alpha=0.7, linewidth=2, label='Dead')
+    # axQ.plot(t, maxI,    'y--', alpha=0.7, linewidth=2, label='Max. Infected')
+    # axQ.plot(t, maxD,    'r--', alpha=0.7, linewidth=2, label='Max. Dead')
+    axQ.plot(t, S+E+I+R+D, 'c--', alpha=0.7, linewidth=2, label='Total')
 
-    ax.yaxis.set_tick_params(length=0)
-    ax.xaxis.set_tick_params(length=0)
-    ax.grid(b=True, which='major', c='w', lw=2, ls='-')
-    legend = ax.legend()
-    legend.get_frame().set_alpha(0.5)
-    for spine in ('top', 'right', 'bottom', 'left'):
-        ax.spines[spine].set_visible(False)
+    #axQ.set_ylim(1, N)
+    #axQ.set_yscale('log')
+    #axQ.set_ylim(0, 46000000)
+    axQ.set_xlabel('Time (Days)')
+    axQ.set_ylabel('Population')
+    
+    axQ.yaxis.set_major_formatter(mtick.FormatStrFormatter('%1.e'))
+    
+    legend = fig.legend()
+    legend.get_frame()#.set_alpha(0.5)
 
+    
     plt.show()
 
     plt.clf()
+    
+    
+    
+    # fig, (axR, axD) = plt.subplots(2, sharex=True)
+    
+    # fig.suptitle('Fit of Dead Individuals')
+    
+    # axR.plot(t, residual)
+    # axR.axhline(0, linestyle='--')
+
+    # axR.set_ylabel('Residual')
+
+
+    # axD.scatter(t, total_deaths, s=4, label='Data')
+    # axD.plot(t, D, 'y', label='Best Fit')
+
+    # axD.set_xlabel('Time (Days)')
+    # axD.set_ylabel('Population')
+
+    # legend = axD.legend()
+    # legend.get_frame().set_alpha(0.5)
+
+
+    # plt.show()
+    # plt.clf()
 
 
 
@@ -244,7 +295,7 @@ logistic function.
 def plotBeta(times, L_E, k_E, t_0_E, L_I, k_I, t_0_I):
     fig, ax = plt.subplots()
     
-    ax.set_title('Beta over Time')
+    ax.set_title('Beta Over Time')
     ax.set_xlabel('Time (Days)')
     ax.set_ylabel('Beta')
     ax.plot(times, beta(times, L_E, k_E, t_0_E), 'c--', label='Exposed')
@@ -275,14 +326,20 @@ def calculateR_0_NGM(time, L_E, k_E, t_0_E, alpha):
 """PLOTTING R_0 FUNCTION NGM---------------------------------------------------
 This displays a graph of the R0 function as modeled by the NGM. 
 ----------------------------------------------------------------------------"""
-def plotR_0_NGM(time, L_E, k_E, t_0_E, alpha):
-    fig, axsR = plt.subplots()
+def plotR_0_NGM(time, L_E, k_E, t_0_E, alpha, sigma_R_0):
+    fig, (axs, axsR) = plt.subplots(2, sharex=True)
 
-    axsR.set_title('Reproduction Number (R\u2080) Over Time')
+    fig.suptitle('Reproduction Number (R\u2080) Over Time')
+
+
     axsR.set_xlabel('Time (Days)')
-    axsR.set_ylabel('Reproduction Number (R\u2080)')
+    axs.set_ylabel('Uncertinty')
+
+    axsR.set_ylabel('R\u2080')
 
     axsR.plot(time, calculateR_0_NGM(time, L_E, k_E, t_0_E, alpha))
+
+    axs.plot(time, sigma_R_0)
 
     plt.show()
     plt.clf()
@@ -294,75 +351,99 @@ def plotR_0_NGM(time, L_E, k_E, t_0_E, alpha):
 This function plots the data of cases and the best fit for our model.
 ----------------------------------------------------------------------------"""
 def plotBestFitInfected(t, I, total_con, residual):
-    fig, axR = plt.subplots()
+    fig, (axR1, axI) = plt.subplots(2, sharex=True)
+    
+    fig.suptitle('Fit of Infected Individuals')
+  
+    
+    axR1.plot(t, residual)
+    axR1.axhline(0, linestyle='--')
 
-    axR.plot(t, residual)
-    axR.axhline(0, linestyle='--')
+    axR1.set_ylabel('Residual')
 
-    axR.set_title('Residual of Infected Population')
-    axR.set_ylabel('Residual')
-    axR.set_xlabel('Time (Days)')
 
-    plt.show()
-    plt.clf()
+    axI.scatter(t, total_con, s=4, label='Data')
+    axI.plot(t, I, 'y', label='Best fit')
 
-    f, axI = plt.subplots()
-
-    axI.scatter(t, total_con, s=4, label='ata')
-    axI.plot(t, I, 'y', label='best fit')
-
-    #ax.set_ylim(0, 1200000)
-    #ax.set_ylim(0, 60953552)
     axI.set_xlabel('Time (Days)')
-    axI.set_ylabel('Population (Number of Infected Individuals)')
-    axI.set_title('Population of Infected Individuals')
+    axI.set_ylabel('Population')
 
-    axI.yaxis.set_tick_params(length=0)
-    axI.xaxis.set_tick_params(length=0)
-    axI.grid(b=True, which='major', c='w', lw=2, ls='-')
     legend = axI.legend()
     legend.get_frame().set_alpha(0.5)
-    for spine in ('top', 'right', 'bottom', 'left'):
-        axI.spines[spine].set_visible(False)
+
 
     plt.show()
     plt.clf()
+    
+
+def plotBestFit(t, I, D, total_con, total_deaths, residual):
+    fig, ((axIR, axDR), (axI, axD)) = plt.subplots(2,2, sharex=True)
+    
+    #fig.suptitle('Fitting to Data')
+    axI.set_xlabel('Time (Days)')
+    axD.set_xlabel('Time (Days)')
+    
+    #Infected
+    axIR.plot(t, residual[:130])
+    axIR.axhline(0, linestyle='--')
+
+    axIR.set_ylabel('Residual')
+    axIR.set_title('Fit of Infected')
+
+    axI.scatter(t, total_con, s=4, label='Data')
+    axI.plot(t, I, 'y', label='Best fit')
+
+    axI.set_ylabel('Population')
+
+    legendI = axI.legend()
+    legendI.get_frame().set_alpha(0.5)
+    
+    
+    #Dead
+    axDR.plot(t, residual[130:260])
+    axDR.axhline(0, linestyle='--')
+    
+    axDR.set_title('Fit of Dead')
+
+    axD.scatter(t, total_deaths, s=4, label='Data')
+    axD.plot(t, D, 'y', label='Best Fit')
+
+    legendD = axD.legend()
+    legendD.get_frame().set_alpha(0.5)
+    
+    plt.tight_layout()
+    plt.show()
+    plt.clf()
+
+    
+    
+    
+    
 
 
 """PLOT THE BEST FIT OF DEAD---------------------------------------------------
 This function plots the data of dead and the best fit for our model.
 ----------------------------------------------------------------------------"""
 def plotBestFitDied(t, D, total_deaths, residual):
-    fig, axR = plt.subplots()
-    #axR = fig.add_subplot(411, anchor=(0, 1))
+    fig, (axR, axD) = plt.subplots(2, sharex=True)
+    
+    fig.suptitle('Fit of Dead Individuals')
+    
     axR.plot(t, residual)
     axR.axhline(0, linestyle='--')
 
-    axR.set_title('Residual of Dead Population')
     axR.set_ylabel('Residual')
-    axR.set_xlabel('Time (Days)')
 
-    plt.show()
-    plt.clf()
-
-    fig, axD = plt.subplots()
 
     axD.scatter(t, total_deaths, s=4, label='Data')
     axD.plot(t, D, 'y', label='Best Fit')
 
-    #ax.set_ylim(0, 1200000)
-    #ax.set_ylim(0, 60953552)
     axD.set_xlabel('Time (Days)')
-    axD.set_ylabel('Population (Number of Dead Individuals)')
-    axD.set_title('Population of Dead Individuals' )
+    axD.set_ylabel('Population')
 
-    axD.yaxis.set_tick_params(length=0)
-    axD.xaxis.set_tick_params(length=0)
-    axD.grid(b=True, which='major', c='w', lw=2, ls='-')
     legend = axD.legend()
     legend.get_frame().set_alpha(0.5)
-    for spine in ('top', 'right', 'bottom', 'left'):
-        axD.spines[spine].set_visible(False)
+
 
     plt.show()
     plt.clf()
@@ -373,36 +454,25 @@ def plotBestFitDied(t, D, total_deaths, residual):
 This function plots the data of delta and the best fit for our model.
 ----------------------------------------------------------------------------""" 
 def plotBestFitDelta(t, D, I, total_deaths, total_con, residual):
-    fig, axR = plt.subplots()
-    #axR = fig.add_subplot(411, anchor=(0, 1))
+    fig, (axR, axD) = plt.subplots(2, sharex=True)
+    
+    fig.suptitle('Fit of Fatality Rate')
+    
     axR.plot(t, residual)
     axR.axhline(0, linestyle='--')
 
-    axR.set_title('Residual of the Fatality Rate')
+
     axR.set_ylabel('Residual')
-    axR.set_xlabel('Time (Days)')
 
-    plt.show()
-    plt.clf()
 
-    fig, axD = plt.subplots()
+    axD.scatter(t, total_deaths/total_con, s=4, label='Data')
+    axD.plot(t, D/I , 'y', label='Best fit')
 
-    axD.scatter(t, total_deaths/total_con, s=4, label='data')
-    axD.plot(t, D/I , 'y', label='best fit')
-
-    #ax.set_ylim(0, 1200000)
-    #ax.set_ylim(0, 60953552)
     axD.set_xlabel('Time (Days)')
     axD.set_ylabel('Fatality Rate')
-    axD.set_title('Fatality Rate of COVID-19')
 
-    axD.yaxis.set_tick_params(length=0)
-    axD.xaxis.set_tick_params(length=0)
-    axD.grid(b=True, which='major', c='w', lw=2, ls='-')
     legend = axD.legend()
     legend.get_frame().set_alpha(0.5)
-    for spine in ('top', 'right', 'bottom', 'left'):
-        axD.spines[spine].set_visible(False)
 
     plt.show()
     plt.clf()
@@ -573,10 +643,8 @@ if __name__ == "__main__":
                 result.best_values['L_E'],
                 result.best_values['k_E'],
                 result.best_values['t_0_E'],
-                result.best_values['alpha'])
-    
-    #Plot the uncertainty of R_0  
-    plotErrorProp(times, errorProp(times, 
+                result.best_values['alpha'], 
+                errorProp(times, 
                     result.best_values['L_E'], 
                     result.best_values['k_E'],
                     result.best_values['t_0_E'], 
@@ -671,6 +739,8 @@ if __name__ == "__main__":
     plotBestFitInfected(times, I, total_con, residualOfIandD[:130])
     plotBestFitDied(times, D, total_deaths, residualOfIandD[130:260])
     plotBestFitDelta(times, D, I, total_deaths, total_con, residualOfIandD[260:])
+    
+    plotBestFit(times, I, D, total_con, total_deaths, residualOfIandD)
 
 
     print('Population of the US:', N)
@@ -686,14 +756,8 @@ if __name__ == "__main__":
 
     print('Total:', min(total)) # should equal total population
 
-    #Plot SEIRD model -- Based on data
-    plotSEIRD(times, S, E, I, R, D, 'SEIRD Model of COVID-19')
-    
-    #Plot SEIRD model -- without quarentine (using the max. beta and max. delta from delta)
-    plotSEIRD(times, S_wo, E_wo, I_wo, R_wo, D_wo, 'SEIRD Model of COVID-19 without Quatentine')
-    
+    #Plot SEIRD model -- Based on data with and without quarentine
+    plotSEIRD(times, S, E, I, R, D, S_wo, E_wo, I_wo, R_wo, D_wo)
+        
     #Plot SEIRD model -- A year out
-    plotSEIRD(moreTimes, S_y, E_y, I_y, R_y, D_y, 'Projected SEIRD Model of COVID-19')
-    
-    #Plot SEIRD model -- without quarentine (using the max. beta and max. delta from data)
-    plotSEIRD(moreTimes, S_woq, E_woq, I_woq, R_woq, D_woq, 'Projected SEIRD Model of COVID-19 without Quatentine')
+    plotSEIRD(moreTimes, S_y, E_y, I_y, R_y, D_y, S_woq, E_woq, I_woq, R_woq, D_woq)
