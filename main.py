@@ -7,6 +7,9 @@ import lmfit
 from lmfit.lineshapes import gaussian, lorentzian
 import numdifftools as ndt
 
+import uncertainties
+from uncertainties import ufloat
+
 import csv
 
 import warnings
@@ -318,15 +321,16 @@ def plotBeta(times, L_E, k_E, t_0_E, L_I, k_I, t_0_I):
 """R_0 FUNCTION USING NGM------------------------------------------------------
 This function calculates R_0 using the NGM.
 ----------------------------------------------------------------------------"""
-def calculateR_0_NGM(time, L_E, k_E, t_0_E, alpha):
-    R_0 = beta(time, L_E, k_E, t_0_E) / alpha 
+def calculateR_0_NGM(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, a,b,c,d,f, rho):
+    w = gamma * (1- delta(time,a,b,c,d,f)) + rho*delta(time,a,b,c,d,f)
+    R_0 = (beta(time, L_E, k_E, t_0_E) / alpha) + (beta(time, L_I, k_E, t_0_I)/ w)  
     return R_0
  
     
 """PLOTTING R_0 FUNCTION NGM---------------------------------------------------
 This displays a graph of the R0 function as modeled by the NGM. 
 ----------------------------------------------------------------------------"""
-def plotR_0_NGM(time, L_E, k_E, t_0_E, alpha, sigma_R_0):
+def plotR_0_NGM(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, a, b, c, d, f, rho, sigma_R_0):
     fig, (axs, axsR) = plt.subplots(2, sharex=True)
 
     fig.suptitle('Reproduction Number (R\u2080) Over Time')
@@ -337,7 +341,7 @@ def plotR_0_NGM(time, L_E, k_E, t_0_E, alpha, sigma_R_0):
 
     axsR.set_ylabel('R\u2080')
 
-    axsR.plot(time, calculateR_0_NGM(time, L_E, k_E, t_0_E, alpha))
+    axsR.plot(time, calculateR_0_NGM(time, L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, a,b,c,d,f, rho))
 
     axs.plot(time, sigma_R_0)
 
@@ -481,29 +485,275 @@ def plotBestFitDelta(t, D, I, total_deaths, total_con, residual):
 """ERROR PROPOGATION----------------------------------------------------------
 This function computes the variance of R_0. This is a manual function.
 ----------------------------------------------------------------------------"""
-def errorProp(t, L, k, t_0, alpha):
-    dR_0dL = beta(t, 1, k, t_0)/ alpha
-    dR_0dk = -beta(t, L, k ,t_0) * (t - t_0) * np.power(np.e, k*(t-t_0))/(alpha * (1 + np.power(np.e, k*(t-t_0))))
-    dR_0dt_0 = (k * np.power(np.e, k*(t-t_0)) * beta(t, L, k, t_0))/ (alpha * (1 + np.power(np.e, k*(t-t_0))))
-    dR_0da = -1 * beta(t, L, k ,t_0)/alpha**2
+def errorProp(t,  L_E, k_E, t_0_E, L_I, k_I, t_0_I, gamma, alpha, a, b, c, d, f, rho):
+    R_0 = (L_E/(1+np.power(np.e, k_E*(t-t_0_E))))/alpha + (L_I/(1+np.power(np.e, k_I*(t-t_0_I))))/(gamma * (1- (abs(((t-a) * (t-b) * (t-c) * d * np.exp(-f * t)) + a*b*c*d) * 0.2 )) + rho*(abs(((t-a) * (t-b) * (t-c) * d * np.exp(-f * t)) + a*b*c*d) * 0.2 ))
+    w = gamma * (1- delta(t,a,b,c,d,f)) + rho*delta(t,a,b,c,d,f)
     
-    sigma_R_0 = (abs(dR_0dL)**2 * 35.7762578**2 + abs(dR_0dk)**2 * 0.89701212**2 
-                 + abs(dR_0dt_0)**2 * 21785.9891**2  + abs(dR_0da)**2 * 12.9266165**2 
-                 + 2 * dR_0dL * dR_0dk * -0.999 
-                 + 2 * dR_0dL * dR_0dt_0 * -0.978
-                 + 2 * dR_0dL * dR_0da * 0.995
-                 + 2 * dR_0dk * dR_0dt_0 * 0.969
-                 + 2 * dR_0dk * dR_0da * -0.998
-                 + 2 * dR_0dt_0 * dR_0da * -0.953) 
     
+    
+    dR_0dL_E = 1/(1+np.power(np.e, k_E*(t-t_0_E)))/alpha
+    
+    dR_0dk_E = -beta(t, L_E, k_E ,t_0_E) * (t - t_0_E) * np.power(np.e, k_E*(t-t_0_E))/(alpha * (1 + np.power(np.e, k_E*(t-t_0_E))))
+    
+    dR_0dt_0_E = (k_E * np.power(np.e, k_E*(t-t_0_E)) * beta(t, L_E, k_E, t_0_E))/ (alpha * (1 + np.power(np.e, k_E*(t-t_0_E))))
+    
+    dR_0dL_I = (1/(1+np.power(np.e, k_I*(t-t_0_I))))/(gamma * (1- (abs(((t-a) * (t-b) * (t-c) * d * np.exp(-f * t)) + a*b*c*d) * 0.2 )) + rho*(abs(((t-a) * (t-b) * (t-c) * d * np.exp(-f * t)) + a*b*c*d) * 0.2 ))
+    
+    dR_0dk_I = -beta(t, L_I, k_I ,t_0_I) * (t - t_0_I) * np.power(np.e, k_I*(t-t_0_I))/(w * (1 + np.power(np.e, k_I*(t-t_0_I))))
+    
+    dR_0dt_0_I = (k_I * np.power(np.e, k_I*(t-t_0_I)) * beta(t, L_I, k_I, t_0_I))/ (w * (1 + np.power(np.e, k_I*(t-t_0_I))))
+    
+    dR_0dgamma = -1 * beta(t, L_I, k_I, t_0_I)/(gamma**2 * (1-delta(t, a, b, c, d, f)))
+    
+    dR_0dalpha = -1 * beta(t, L_E, k_E ,t_0_E)/alpha**2
+    
+    dR_0da = (-((rho*(b*c*d-d*(t-b)*(t-c)*np.exp(-f*t))*(b*c*d*a+d*(t-b)*(t-c)*np.exp(-f*t)*(t-a)))/(5*abs(b*c*d*a+d*(t-b)*(t-c)*np.exp(-f*t)*(t-a)))-(gamma*(b*c*d-d*(t-b)*(t-c)*np.exp(-f*t))*(b*c*d*a+d*(t-b)*(t-c)*np.exp(-f*t)*(t-a)))/(5*abs(b*c*d*a+d*(t-b)*(t-c)*np.exp(-f*t)*(t-a))))/((rho*abs(b*c*d*a+d*(t-b)*(t-c)*np.exp(-f*t)*(t-a)))/5+gamma*(1-abs(b*c*d*a+d*(t-b)*(t-c)*np.exp(-f*t)*(t-a))/5))**2) * beta(t, L_I, k_I, t_0_I)
+    
+    dR_0db = (-((rho*(a*c*d-d*(t-a)*(t-c)*np.exp(-f*t))*(a*c*d*b+d*(t-a)*(t-c)*np.exp(-f*t)*(t-b)))/(5*abs(a*c*d*b+d*(t-a)*(t-c)*np.exp(-f*t)*(t-b)))-(gamma*(a*c*d-d*(t-a)*(t-c)*np.exp(-f*t))*(a*c*d*b+d*(t-a)*(t-c)*np.exp(-f*t)*(t-b)))/(5*abs(a*c*d*b+d*(t-a)*(t-c)*np.exp(-f*t)*(t-b))))/((rho*abs(a*c*d*b+d*(t-a)*(t-c)*np.exp(-f*t)*(t-b)))/5+gamma*(1-abs(a*c*d*b+d*(t-a)*(t-c)*np.exp(-f*t)*(t-b))/5))**2) * beta(t, L_I, k_I, t_0_I)
+    
+    dR_0dc = (-((rho*(a*b*d-d*(t-a)*(t-b)*np.exp(-f*t))*(a*b*d*c+d*(t-a)*(t-b)*np.exp(-f*t)*(t-c)))/(5*abs(a*b*d*c+d*(t-a)*(t-b)*np.exp(-f*t)*(t-c)))-(gamma*(a*b*d-d*(t-a)*(t-b)*np.exp(-f*t))*(a*b*d*c+d*(t-a)*(t-b)*np.exp(-f*t)*(t-c)))/(5*abs(a*b*d*c+d*(t-a)*(t-b)*np.exp(-f*t)*(t-c))))/((rho*abs(a*b*d*c+d*(t-a)*(t-b)*np.exp(-f*t)*(t-c)))/5+gamma*(1-abs(a*b*d*c+d*(t-a)*(t-b)*np.exp(-f*t)*(t-c))/5))**2) * beta(t, L_I, k_I, t_0_I)
+    
+    dR_0dd = (-((rho*((t-a)*(t-b)*(t-c)*np.exp(-f*t)+a*b*c)*((t-a)*(t-b)*(t-c)*np.exp(-f*t)*d+a*b*c*d))/(5*abs((t-a)*(t-b)*(t-c)*np.exp(-f*t)*d+a*b*c*d))-(gamma*((t-a)*(t-b)*(t-c)*np.exp(-f*t)+a*b*c)*((t-a)*(t-b)*(t-c)*np.exp(-f*t)*d+a*b*c*d))/(5*abs((t-a)*(t-b)*(t-c)*np.exp(-f*t)*d+a*b*c*d)))/((rho*abs((t-a)*(t-b)*(t-c)*np.exp(-f*t)*d+a*b*c*d))/5+gamma*(1-abs((t-a)*(t-b)*(t-c)*np.exp(-f*t)*d+a*b*c*d)/5))**2) * beta(t, L_I, k_I, t_0_I)
+    
+    dR_0df = ((5*np.power(d,2)*(rho-gamma)*t*(t-a)*(t-b)*(t-c)*np.exp(-2*t*f)*(a*b*c*np.exp(t*f)+np.power(t,3)+(-c-b-a)*np.power(t,2)+((b+a)*c+a*b)*t-a*b*c))/(abs(d*(t-a)*(t-b)*(t-c)*np.exp(-t*f)+a*b*c*d)*np.power(((rho-gamma)*abs(d*(t-a)*(t-b)*(t-c)*np.exp(-t*f)+a*b*c*d)+5*gamma),2))) * beta(t, L_I, k_I, t_0_I)
+    
+    dR_0drho = -1 * beta(t, L_I, k_I, t_0_I)/(rho**2 * delta(t, a, b, c, d, f))
+    
+    sigL_E = 35.7762578
+    sigk_E = 0.89701212
+    sigt_0_E = 21785.9891
+    sigL_I = 76.8633892
+    sigk_I = 76.8633892
+    sigt_0_I = 1.56513785
+    sig_gamma = 0.23118479
+    sig_alpha = 12.9266165
+    sig_a = 25.4713490
+    sig_b = 60.7551424
+    sig_c = 8.69608492
+    sig_d = 0.00797996
+    sig_f = 0.00735950
+    sig_rho = 190.565404
+    
+    sig_Lnk_E = -0.999
+    sig_Lnt_E = -0.978
+    sig_L_EnL_I = -0.996
+    sig_L_Enk_I = 0.152
+    sig_L_Ent_I = -0.556
+    sig_Ln_gamma = -0.466 
+    sig_Ln_alpha = 0.995
+    sig_Lna = -0.326
+    sig_Lnb = 0.123
+    sig_Lnc = 0.363
+    sig_Lnd = -0.305
+    sig_Lnf = 0.099
+    sig_Lnrho = 0.305
+    
+    sig_knt_E = 0.969
+    sig_k_EnL_I = 0.998
+    sig_k_Enk_I = -0.119
+    sig_k_Ent_I = 0.586
+    sig_k_En_gamma = 0.498
+    sig_k_En_alpha = -0.998
+    sig_k_Ena = 0.309
+    sig_k_Enb = -0.131
+    sig_k_Enc = -0.350
+    sig_k_End = 0.340
+    sig_k_Enf = 0.099
+    sig_k_Enrho = -0.340
+    
+    sig_t_EnL_I = 0.954
+    sig_t_Enk_I = -0.332
+    sig_t_Ent_I = 0.372
+    sig_t_En_gamma = 0.284
+    sig_t_En_alpha = -0.953
+    sig_t_Ena = 0.412
+    sig_t_Enb = 0.099
+    sig_t_Enc = -0.422
+    sig_t_End = 0.118
+    sig_t_Enf = 0.099
+    sig_t_Enrho = -0.118
+    
+    sig_Lnk_I = 0.099
+    sig_Lnt_I = 0.629
+    sig_L_In_gamma = 0.540
+    sig_L_In_alpha = -1.000
+    sig_L_Ina = 0.284
+    sig_L_Inb = 0.146
+    sig_L_Inc = -0.331
+    sig_L_Ind = 0.384
+    sig_L_Inf = 0.099
+    sig_L_Inrho = -0.384
+    
+    sig_knt_I = 0.675
+    sig_k_In_gamma = 0.671
+    sig_k_In_alpha = 0.099
+    sig_k_Ina = -0.789
+    sig_k_Inb = 0.099
+    sig_k_Inc = 0.630
+    sig_k_Ind = 0.784
+    sig_k_Inf = -0.271
+    sig_k_Inrho = -0.784
+    
+    sig_t_In_gamma = 0.932
+    sig_t_In_alpha = -0.631
+    sig_t_Ina = -0.268
+    sig_t_Inb = -0.172
+    sig_t_Inc = 0.152
+    sig_t_Ind = 0.885
+    sig_t_Inf = -0.278
+    sig_t_Inrho = -0.885
+    
+    sig_gamman_alpha = -0.543
+    sig_gammana = -0.232
+    sig_gammanb = -0.149
+    sig_gammanc = 0.099
+    sig_gammand = 0.978
+    sig_gammanf = -0.244
+    sig_gammanrho = -0.978
+    
+    sig_alphana = -0.283
+    sig_alphanb = 0.146
+    sig_alphanc = 0.330
+    sig_alphand = -0.386
+    sig_alphanf = 0.099
+    sig_alphanrho = 0.386
+    
+    sig_anb = -0.363
+    sig_anc = -0.744
+    sig_and = -0.387
+    sig_anf = 0.099
+    sig_anrho = 0.386
+    
+    sig_bnc = 0.099
+    sig_bnd = 0.099
+    sig_bnf = 0.942
+    sig_bnrho = 0.099
+    
+    sig_cnd = -0.222
+    sig_cnf = -0.141
+    sig_cnrho = -0.222
+    
+    sig_dnf = -0.214
+    sig_dnrho = -1.000
+    
+    sig_fnrho = 0.217
+    
+    
+    sigma_R_0 = ((abs(dR_0dL_E)**2 * sigL_E**2 
+                 + abs(dR_0dk_E)**2 * sigk_E**2 
+                 + abs(dR_0dt_0_E)**2 * sigt_0_E**2
+                 + abs(dR_0dL_I)**2 * sigL_I**2
+                 + abs(dR_0dk_I)**2 * sigk_I**2
+                 + abs(dR_0dt_0_I)**2 * sigt_0_I**2
+                 + abs(dR_0dgamma)**2 * sig_gamma**2
+                 + abs(dR_0dalpha)**2 * sig_alpha**2
+                 + abs(dR_0da)**2 * sig_a**2
+                 + abs(dR_0db)**2 * sig_b**2
+                 + abs(dR_0dc)**2 * sig_c**2
+                 + abs(dR_0dd)**2 * sig_d**2
+                 + abs(dR_0df)**2 * sig_f**2
+                 + abs(dR_0drho)**2 * sig_rho**2) 
+                 + (2 * dR_0dL_E * (dR_0dk_E * sig_Lnk_E
+                 + dR_0dt_0_E * sig_Lnt_E
+                 + dR_0dL_I * sig_L_EnL_I
+                 + dR_0dk_I * sig_L_Enk_I
+                 + dR_0dt_0_I * sig_L_Ent_I
+                 + dR_0dgamma * sig_Ln_gamma
+                 + dR_0dalpha * sig_Ln_alpha
+                 + dR_0da * sig_Lna
+                 + dR_0db * sig_Lnb
+                 + dR_0dc * sig_Lnc
+                 + dR_0dd * sig_Lnd
+                 + dR_0df * sig_Lnf
+                 + dR_0drho * sig_Lnrho))
+                 + (2 * dR_0dk_E * (dR_0dt_0_E * sig_knt_E
+                 + dR_0dL_I * sig_k_EnL_I
+                 + dR_0dk_I * sig_k_Enk_I
+                 + dR_0dt_0_I * sig_k_Ent_I
+                 + dR_0dgamma * sig_k_En_gamma
+                 + dR_0dalpha * sig_k_En_alpha
+                 + dR_0da * sig_k_Ena
+                 + dR_0db * sig_k_Enb
+                 + dR_0dc * sig_k_Enc
+                 + dR_0dd * sig_k_End
+                 + dR_0df * sig_k_Enf
+                 + dR_0drho * sig_k_Enrho))
+                 + (2 * dR_0dt_0_E * (dR_0dL_I * sig_t_EnL_I
+                 + dR_0dk_I * sig_t_Enk_I
+                 + dR_0dt_0_I * sig_t_Ent_I
+                 + dR_0dgamma * sig_t_En_gamma
+                 + dR_0dalpha * sig_t_En_alpha
+                 + dR_0da * sig_t_Ena
+                 + dR_0db * sig_t_Enb
+                 + dR_0dc * sig_t_Enc
+                 + dR_0dd * sig_t_End
+                 + dR_0df * sig_t_Enf
+                 + dR_0drho * sig_t_Enrho))
+                 + (2 * dR_0dL_I * (dR_0dk_I * sig_Lnk_I
+                 + dR_0dt_0_I * sig_Lnt_I
+                 + dR_0dgamma * sig_L_In_gamma
+                 + dR_0dalpha * sig_L_In_alpha
+                 + dR_0da * sig_L_Ina
+                 + dR_0db * sig_L_Inb
+                 + dR_0dc * sig_L_Inc
+                 + dR_0dd * sig_L_Ind
+                 + dR_0df * sig_L_Inf
+                 + dR_0drho * sig_L_Inrho))
+                 + (2 * dR_0dk_I * (dR_0dt_0_I * sig_knt_I
+                 + dR_0dgamma * sig_k_In_gamma
+                 + dR_0dalpha * sig_k_In_alpha
+                 + dR_0da * sig_k_Ina
+                 + dR_0db * sig_k_Inb
+                 + dR_0dc * sig_k_Inc
+                 + dR_0dd * sig_k_Ind
+                 + dR_0df * sig_k_Inf
+                 + dR_0drho * sig_k_Inrho))
+                 + (2 * dR_0dt_0_I * (dR_0dgamma * sig_t_In_gamma
+                 + dR_0dalpha * sig_t_In_alpha
+                 + dR_0da * sig_t_Ina
+                 + dR_0db * sig_t_Inb
+                 + dR_0dc * sig_t_Inc
+                 + dR_0dd * sig_t_Ind
+                 + dR_0df * sig_t_Inf
+                 + dR_0drho * sig_t_Inrho))
+                 + (2 * dR_0dgamma * (dR_0dalpha * sig_gamman_alpha
+                 + dR_0da * sig_gammana
+                 + dR_0db * sig_gammanb
+                 + dR_0dc * sig_gammanc
+                 + dR_0dd * sig_gammand
+                 + dR_0df * sig_gammanf
+                 + dR_0drho * sig_gammanrho))
+                 + (2 * dR_0dalpha * (dR_0da * sig_alphana
+                 + dR_0db * sig_alphanb
+                 + dR_0dc * sig_alphanc
+                 + dR_0dd * sig_alphand
+                 + dR_0df * sig_alphanf
+                 + dR_0drho * sig_alphanrho))
+                 + (2 * dR_0da * (dR_0db * sig_anb
+                 + dR_0dc * sig_anc
+                 + dR_0dd * sig_and
+                 + dR_0df * sig_anf
+                 + dR_0drho * sig_anrho))
+                 + (2 * dR_0db * (dR_0dc * sig_bnc
+                 + dR_0dd * sig_bnd
+                 + dR_0df * sig_bnf
+                 + dR_0drho * sig_bnrho))
+                 + (2 * dR_0dc * (dR_0dd * sig_cnd
+                 + dR_0df * sig_cnf
+                 + dR_0drho * sig_cnrho))
+                 + (2 * dR_0dd * (dR_0df * sig_dnf
+                 + dR_0drho * sig_dnrho))
+                 + (2 * dR_0df * (dR_0drho * sig_fnrho)))
     
     return sigma_R_0**0.5
 
 
-"""ERROR PROPOGATION PLOT------------------------------------------------------
-This function computes the variance of R_0. This is a manual function.
-----------------------------------------------------------------------------"""
+# """ERROR PROPOGATION PLOT------------------------------------------------------
+# This function computes the variance of R_0. This is a manual function.
+# ----------------------------------------------------------------------------"""
+
 def plotErrorProp(t, sigma_R_0):
+    
     fig, axsR = plt.subplots()
 
     axsR.set_title('Error of Reproduction Number (R\u2080)')
@@ -589,9 +839,13 @@ if __name__ == "__main__":
     
     
     print('Maximum of Beta for Exposed: ', max(beta(times,
-                                        result.best_values['L_E'],
-                                        result.best_values['k_E'],
-                                        result.best_values['t_0_E'])))
+                                                    result.best_values['L_I'],
+                                        result.best_values['k_I'],
+                                        result.best_values['t_0_I'])))
+                                                    
+                                        # result.best_values['L_E'],
+                                        # result.best_values['k_E'],
+                                        # result.best_values['t_0_E'])))
         
     print('Maximum of Beta for Infected: ', max(beta(times,
                                         result.best_values['L_I'],
@@ -610,24 +864,64 @@ if __name__ == "__main__":
                                                     result.best_values['L_E'],
                                                     result.best_values['k_E'],
                                                     result.best_values['t_0_E'],
-                                                    result.best_values['alpha'])))
+                                                    result.best_values['L_I'],
+                                                    result.best_values['k_I'],
+                                                    result.best_values['t_0_I'],
+                                                    result.best_values['gamma'],
+                                                    result.best_values['alpha'],
+                                                    result.best_values['a'],
+                                                      result.best_values['b'],
+                                                      result.best_values['c'],
+                                                      result.best_values['d'],
+                                                      result.best_values['f'],
+                                                    result.best_values['rho'])))
 
     print('Minimun R_0_NGM: ', min(calculateR_0_NGM(times,
                                                     result.best_values['L_E'],
                                                     result.best_values['k_E'],
                                                     result.best_values['t_0_E'],
-                                                    result.best_values['alpha'])))
+                                                    result.best_values['L_I'],
+                                                    result.best_values['k_I'],
+                                                    result.best_values['t_0_I'],
+                                                    result.best_values['gamma'],
+                                                    result.best_values['alpha'],
+                                                    result.best_values['a'],
+                                                      result.best_values['b'],
+                                                      result.best_values['c'],
+                                                      result.best_values['d'],
+                                                      result.best_values['f'],
+                                                    result.best_values['rho'])))
 
     print('Mean R_0_NGM: ', (max(calculateR_0_NGM(times,
-                                                  result.best_values['L_E'],
-                                                  result.best_values['k_E'],
-                                                  result.best_values['t_0_E'],
-                                                  result.best_values['alpha'])) + 
+                                                    result.best_values['L_E'],
+                                                    result.best_values['k_E'],
+                                                    result.best_values['t_0_E'],
+                                                    result.best_values['L_I'],
+                                                    result.best_values['k_I'],
+                                                    result.best_values['t_0_I'],
+                                                    result.best_values['gamma'],
+                                                    result.best_values['alpha'],
+                                                    result.best_values['a'],
+                                                      result.best_values['b'],
+                                                      result.best_values['c'],
+                                                      result.best_values['d'],
+                                                      result.best_values['f'],
+                                                    result.best_values['rho'])) + 
                              min(calculateR_0_NGM(times,
-                                                  result.best_values['L_E'],
-                                                  result.best_values['k_E'],
-                                                  result.best_values['t_0_E'],
-                                                  result.best_values['alpha'])))/2)
+                                                    result.best_values['L_E'],
+                                                    result.best_values['k_E'],
+                                                    result.best_values['t_0_E'],
+                                                    result.best_values['L_I'],
+                                                    result.best_values['k_I'],
+                                                    result.best_values['t_0_I'],
+                                                    result.best_values['gamma'],
+                                                    result.best_values['alpha'],
+                                                    result.best_values['a'],
+                                          result.best_values['b'],
+                                          result.best_values['c'],
+                                          result.best_values['d'],
+                                          result.best_values['f'],
+                                                    result.best_values['rho'])))/2)
     
     
     #Plot Betas
@@ -643,12 +937,32 @@ if __name__ == "__main__":
                 result.best_values['L_E'],
                 result.best_values['k_E'],
                 result.best_values['t_0_E'],
-                result.best_values['alpha'], 
+                result.best_values['L_I'],
+                result.best_values['k_I'],
+                result.best_values['t_0_I'],
+                result.best_values['gamma'],
+                result.best_values['alpha'],
+                result.best_values['a'],
+                result.best_values['b'],
+                result.best_values['c'],
+                result.best_values['d'],
+                result.best_values['f'],
+                result.best_values['rho'], 
                 errorProp(times, 
-                    result.best_values['L_E'], 
-                    result.best_values['k_E'],
-                    result.best_values['t_0_E'], 
-                    result.best_values['alpha']))
+                        result.best_values['L_E'],
+                        result.best_values['k_E'],
+                        result.best_values['t_0_E'],
+                        result.best_values['L_I'],
+                        result.best_values['k_I'],
+                        result.best_values['t_0_I'],
+                        result.best_values['gamma'],
+                        result.best_values['alpha'],
+                        result.best_values['a'],
+                        result.best_values['b'],
+                        result.best_values['c'],
+                        result.best_values['d'],
+                        result.best_values['f'],
+                        result.best_values['rho']))
     
     
 
@@ -730,10 +1044,9 @@ if __name__ == "__main__":
                                                                          result.best_values['f'])), 
                                                                         result.best_values['rho'])
     
-    
-    
     #Create an numpy array
     residualOfIandD = result.residual
+    
 
     #Plot Residual and Best Fit
     plotBestFitInfected(times, I, total_con, residualOfIandD[:130])
